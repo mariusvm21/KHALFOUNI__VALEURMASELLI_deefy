@@ -36,7 +36,7 @@ class AddUserAction extends Action {
 
             // Vérifie que les deux mots de passe sont identiques
             if ($pass1 !== $pass2) {
-                return "<p style='color:red;'>Erreur : les mots de passe ne correspondent pas.</p>";
+                return "<p>Erreur : les mots de passe ne correspondent pas.</p>";
             }
 
             try {

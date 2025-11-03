@@ -8,12 +8,27 @@ use iutnc\deefy\exception\AuthnException;
 
 class Authz {
 
+    private static function getPDO(): PDO {
+        $config = parse_ini_file('/users/home/valeurma1u/conf/db.config.ini');
+        if ($config === false) {
+            throw new \Exception("Erreur lecture du fichier de config");
+        }
+
+        $dbName = $config['dbname'] ?? $config['database'] ?? null;
+        $user = $config['username'] ?? $config['user'] ?? '';
+        $pass = $config['password'] ?? $config['pass'] ?? '';
+        $dsn = $config['driver'] . ':host=' . $config['host'] . ';dbname=' . $dbName . ';charset=utf8';
+
+        return new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]);
+    }
+
     public static function checkRole(int $roleAttendu): void {
         $user = AuthnProvider::getSignedInUser();
         $email = $user['email'];
 
-        $pdo = new PDO('mysql:host=localhost;dbname=deefy;charset=utf8', 'root', '');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo = self::getPDO();
 
         $stmt = $pdo->prepare("SELECT role FROM user WHERE email = ?");
         $stmt->execute([$email]);
@@ -31,10 +46,8 @@ class Authz {
         $user = AuthnProvider::getSignedInUser();
         $email = $user['email'];
 
-        $pdo = new PDO('mysql:host=localhost;dbname=deefy;charset=utf8', 'root', '');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo = self::getPDO();
 
-        // Récupérer id et rôle de l'utilisateur
         $stmt = $pdo->prepare("SELECT id, role FROM user WHERE email = ?");
         $stmt->execute([$email]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -48,7 +61,6 @@ class Authz {
 
         if ($role === 100) return; // Admin a accès
 
-        // Vérifier que l'utilisateur est propriétaire de la playlist
         $stmt2 = $pdo->prepare("SELECT * FROM user2playlist WHERE id_user = ? AND id_pl = ?");
         $stmt2->execute([$idUser, $idPlaylist]);
         $check = $stmt2->fetch(PDO::FETCH_ASSOC);

@@ -8,7 +8,6 @@ use iutnc\deefy\render\AudioListRenderer;
 use iutnc\deefy\render\Renderer;
 use iutnc\deefy\auth\AuthnProvider;
 use iutnc\deefy\repository\DeefyRepository;
-use PDO;
 
 class AddPlaylistAction extends Action {
 
@@ -32,11 +31,14 @@ class AddPlaylistAction extends Action {
             $user = AuthnProvider::getSignedInUser();
             $email = $user['email'];
 
-            // Connexion BD pour récupérer l'id_user
-            $pdo = new PDO('mysql:host=localhost;dbname=deefy;charset=utf8', 'root', '');
+            // Récupération du PDO via DeefyRepository
+            $repo = DeefyRepository::getInstance();
+            $pdo = $repo->getPDO();
+
+            // Récupération de l'id_user depuis la base
             $stmt = $pdo->prepare("SELECT id FROM user WHERE email = ?");
             $stmt->execute([$email]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$row) return "<p>Erreur : utilisateur introuvable.</p>";
             $id_user = (int)$row['id'];
@@ -45,7 +47,6 @@ class AddPlaylistAction extends Action {
             $playlist = new Playlist($nom);
 
             // Sauvegarde dans la BD et liaison utilisateur
-            $repo = DeefyRepository::getInstance();
             $repo->saveEmptyPlaylist($playlist, $id_user);
 
             // Sauvegarde en session

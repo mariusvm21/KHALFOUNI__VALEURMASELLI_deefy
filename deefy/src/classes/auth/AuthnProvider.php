@@ -3,17 +3,21 @@ declare(strict_types=1);
 
 namespace iutnc\deefy\auth;
 
-use PDO;
 use iutnc\deefy\exception\AuthnException;
+use iutnc\deefy\repository\DeefyRepository;
+use PDO;
 
 class AuthnProvider {
+
+    private static function getPDO(): PDO {
+        return DeefyRepository::getInstance()->getPDO();
+    }
 
     public static function signin(string $email, string $passwdVerif): void {
         if (session_status() === PHP_SESSION_NONE) session_start();
 
         try {
-            $pdo = new PDO('mysql:host=localhost;dbname=deefy;charset=utf8', 'root', '');
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo = self::getPDO();
 
             $stmt = $pdo->prepare("SELECT passwd, role FROM user WHERE email = ?");
             $stmt->execute([$email]);
@@ -37,8 +41,7 @@ class AuthnProvider {
         if (strlen($pass) < 10) throw new AuthnException("Mot de passe trop court.");
 
         try {
-            $pdo = new PDO('mysql:host=localhost;dbname=deefy;charset=utf8', 'root', '');
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo = self::getPDO();
 
             $stmt = $pdo->prepare("SELECT * FROM user WHERE email = ?");
             $stmt->execute([$email]);

@@ -3,24 +3,56 @@ declare(strict_types=1);
 
 namespace iutnc\deefy\repository;
 
-use iutnc\deefy\audio\lists\Playlist;
 use PDO;
+use iutnc\deefy\audio\lists\Playlist;
 
-class DeefyRepository {
+class DeefyRepository
+{
     private PDO $pdo;
     private static ?DeefyRepository $instance = null;
 
-    private function __construct() {
-        $this->pdo = new PDO('mysql:host=localhost;dbname=deefy;charset=utf8', 'root', '');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Méthode pour configurer le repository depuis le fichier .ini
+    public static function setConfig(string $file): void
+    {
+        if (!file_exists($file) || !is_readable($file)) {
+            throw new \Exception("Impossible de lire le fichier de config : $file");
+        }
+
+        $conf = parse_ini_file($file);
+        if ($conf === false) {
+            throw new \Exception("Erreur lecture du fichier de config");
+        }
+
+        $dbName = $conf['dbname'] ?? $conf['database'] ?? null;
+        $user = $conf['username'] ?? $conf['user'] ?? '';
+        $pass = $conf['password'] ?? $conf['pass'] ?? '';
+        $dsn = $conf['driver'] . ':host=' . $conf['host'] . ';dbname=' . $dbName . ';charset=utf8';
+
+        self::$instance = new self($dsn, $user, $pass);
     }
 
-    public static function getInstance(): self {
-        if (self::$instance === null) self::$instance = new self();
+    private function __construct(string $dsn, string $user, string $pass)
+    {
+        $this->pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]);
+    }
+
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            throw new \Exception("DeefyRepository non configuré !");
+        }
         return self::$instance;
     }
 
-    public function findPlaylistsByUser(string $email): array {
+    public function getPDO(): PDO
+    {
+        return $this->pdo;
+    }
+
+    public function findPlaylistsByUser(string $email): array
+    {
         $stmt = $this->pdo->prepare("
             SELECT p.id, p.nom
             FROM playlist p
@@ -34,19 +66,20 @@ class DeefyRepository {
         $playlists = [];
         foreach ($rows as $row) {
             $pl = new Playlist($row['nom']);
-            $pl->setID((int)$row['id']);
+            $pl->setID((int) $row['id']);
             $playlists[] = $pl;
         }
         return $playlists;
     }
 
-    public function saveEmptyPlaylist(Playlist $pl, int $id_user): Playlist {
+    public function saveEmptyPlaylist(\iutnc\deefy\audio\lists\Playlist $pl, int $id_user): \iutnc\deefy\audio\lists\Playlist
+    {
         // Insertion dans playlist
         $stmt = $this->pdo->prepare("INSERT INTO playlist (nom) VALUES (:nom)");
         $stmt->execute(['nom' => $pl->nom]);
 
         // Récupération de l'ID de la playlist
-        $id_pl = (int)$this->pdo->lastInsertId();
+        $id_pl = (int) $this->pdo->lastInsertId();
         $pl->setID($id_pl);
 
         // Liaison avec l'utilisateur
@@ -55,24 +88,4 @@ class DeefyRepository {
 
         return $pl;
     }
-
-    public function findPlaylistById(int $id): Playlist {
-    $stmt = $this->pdo->prepare("
-        SELECT p.id, p.nom
-        FROM playlist p
-        WHERE p.id = ?
-    ");
-    $stmt->execute([$id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-        throw new \Exception("Playlist introuvable");
-    }
-
-    $playlist = new Playlist($row['nom']);
-    $playlist->setID((int)$row['id']);
-
-    return $playlist;
-}
-
 }
