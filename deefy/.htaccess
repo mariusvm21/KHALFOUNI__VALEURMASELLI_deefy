@@ -2,7 +2,7 @@ RewriteEngine On
 #
 # RewriteBase indispensable sur webetu :
 # à adapter à votre 
-RewriteBase /www/votre-identifiant-ent-ici/deefy
+RewriteBase /www/valeurma1u/deefy
 
 
 #
